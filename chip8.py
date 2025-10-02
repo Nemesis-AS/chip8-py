@@ -1,10 +1,6 @@
-# import random
-# import time
-
-
 class CHIP8:
     MEMORY_SIZE = 4096  # 4KB
-    DISPLAY_RESOLUTION = (128, 64)
+    DISPLAY_RESOLUTION = (64, 32)
     DISPLAY_SIZE = DISPLAY_RESOLUTION[0] * DISPLAY_RESOLUTION[1] // 8 # 64 x 32 pixel display
 
     memory = bytearray(MEMORY_SIZE)
@@ -131,6 +127,9 @@ class CHIP8:
     FPS = 60
     FRAME_TIME = 1.0 / FPS
 
+    def __init__(self):
+        self.boot()
+
     def boot(self):
         # put FONT into memory at FONT_START
         for offset in range(len(self.FONT)):
@@ -249,7 +248,7 @@ class CHIP8:
                 # Draw on Screen
                 # print(f"{ins:04x}", self.registers[(ins & 0x00F0) >> 4])
                 # print("Y: ", f"{((self.memory[self.pc - 2] << 2) + self.memory[self.pc - 1]):08x}")
-                x = self.registers[(ins & self.MASK_X) >> 8] % self.DISPLAY_RESOLUTION[1]
+                x = self.registers[(ins & self.MASK_X) >> 8] % self.DISPLAY_RESOLUTION[0]
                 y = self.registers[(ins & self.MASK_Y) >> 4]
                 # print("Y:")
                 height = ins & self.MASK_N
@@ -264,10 +263,13 @@ class CHIP8:
                         self.display[offset] ^= self.memory[self.i + dy]
                     else:
                         byte_offset = x % 8
-                        # print(self.display[offset + 1])
+                        # print("OFFSET: ", offset)
                         self.display[offset] ^= self.memory[self.i + dy] >> byte_offset
+
+
+                        # if (offset + 1) % 8 == 0:
+                        #     print("Overflow")
                         self.display[offset + 1] ^= (self.memory[self.i + dy] << (8 - byte_offset)) % 256
-                        pass
 
                 # offset = x * self.DISPLAY_RESOLUTION[0] + y
                 # self.display[offset] = n
@@ -282,8 +284,6 @@ class CHIP8:
         return True
 
     def debug_draw(self):
-        text = ""
-
         for y in range(self.DISPLAY_RESOLUTION[1]):
             for x in range(self.DISPLAY_RESOLUTION[0] // 8):
                 # print(x, y)
@@ -295,21 +295,9 @@ class CHIP8:
 
                     if bit == 1:
                         print("█", end="")
-                        text += "█"
                     else:
                         print(" ", end="")
-                        text += " "
-
-                # if self.display[offset] > 0:
-                #     print("D", end="")
-                # else:
-                #     print(" ", end="")
             print("\n", end="")
-            text += "\n"
-
-        # with open("ascii.txt", "w", encoding="utf-8") as f:
-        #     f.write(text)
 
 if __name__ == "__main__":
     emu = CHIP8()
-    emu.boot()
