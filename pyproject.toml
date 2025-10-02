@@ -1,0 +1,7 @@
+[project]
+name = "chip8-py"
+version = "0.1.0"
+description = "A CHIP8 Emulator"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = []
