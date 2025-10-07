@@ -8,9 +8,12 @@ class CHIP8:
     pc = 0  # Program Counter
     i = 0  # Index Register
     stack = []
-    delay = bytearray([0])  # Delay timer
-    sound = bytearray([0])  # Sound Timer
+    
+    delay = 0  # Delay timer
+    sound = 0  # Sound Timer
     registers = bytearray(16)  # 16 single byte General Purpose Registers
+
+    running = False
 
     # General Purpose Register Indices
     V0 = 0
@@ -123,10 +126,6 @@ class CHIP8:
         0x80,
     ]
 
-    # Additional Options
-    FPS = 60
-    FRAME_TIME = 1.0 / FPS
-
     def __init__(self):
         self.boot()
 
@@ -135,48 +134,23 @@ class CHIP8:
         for offset in range(len(self.FONT)):
             self.memory[self.FONT_START + offset] = self.FONT[offset]
 
-        # @temp Add garbage value to mem
-        # for addr in range(len(self.memory)):
-        #     self.memory[addr] = random.randint(0, 20)
-
         # Set the PC to User Space
         self.pc = self.MEM_START + 2
 
     def load(self, data):
         for offset in range(len(data)):
             self.memory[self.MEM_START + offset] = data[offset]
-        
-        # print(self.memory)
 
     def run(self):
-        iteration  = 0
-
         while True:
             if self.pc >= self.MEMORY_SIZE:
                 print("PC Out of Memory!")
                 break
-
             
             res = self.fdre()
 
             if not res:
                 break
-
-            iteration += 1
-
-            if (iteration > 5000):
-                break
-        
-        # print(self.display)
-
-        # next_frame = time.perf_counter()
-        # while True:
-        #     self.tick()
-
-        #     next_frame += self.FRAME_TIME
-        #     sleep = next_frame - time.perf_counter()
-        #     if sleep > 0:
-        #         time.sleep(sleep)
 
     def tick(self):
         print("Tick")
@@ -188,6 +162,7 @@ class CHIP8:
         self.pc += 2
 
         if ins == 0x0000:
+            self.running = False
             return False
 
         # Decode

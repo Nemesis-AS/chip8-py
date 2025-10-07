@@ -14,9 +14,10 @@ ROMS = [
 ]
 
 with open(ROMS[1], "rb") as file:
-    SCALE = 16
+    # SCALE = 16
 
     data = file.read()
     emu.load(data)
     emu.run()
-    emu.draw_static(SCALE)
+    # emu.debug_draw()
+    # emu.draw_static(SCALE)

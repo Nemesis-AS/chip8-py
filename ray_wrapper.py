@@ -1,3 +1,4 @@
+import time
 import numpy as np
 import pyray as pr
 from PIL import Image
@@ -6,6 +7,54 @@ from chip8 import CHIP8
 
 
 class CHIP8Ray(CHIP8):
+    # Additional Options
+    FPS = 60
+    FRAME_TIME = 1.0 / FPS
+    INSTRUCTIONS_PER_FRAME = 12
+    INSTRUCTIONS_PER_SECOND = FPS * INSTRUCTIONS_PER_FRAME # For debug purposes
+    SCALE = 16
+
+    def run(self):
+        self.running = True
+
+        # Initialize Window
+        pr.init_window(
+            self.DISPLAY_RESOLUTION[0] * self.SCALE,
+            self.DISPLAY_RESOLUTION[1] * self.SCALE,
+            "CHIP8 Emulator",
+        )
+
+        last_time = time.perf_counter()
+
+        while not pr.window_should_close():
+            for _ in range(self.INSTRUCTIONS_PER_FRAME):
+                self.fdre()
+                # res = self.fdre()
+                # if not res:
+                #     return
+
+            # Update Timers
+            if self.delay > 0:
+                self.delay -= 1
+            
+            if self.sound > 0:
+                self.sound -= 1
+            
+            # Update screen
+            self.draw(self.SCALE)
+
+            now = time.perf_counter()
+            frame_time = now - last_time
+
+            remaining = self.FRAME_TIME - frame_time
+            if remaining > 0:
+                time.sleep(remaining)
+
+            last_time = time.perf_counter()
+
+        self.running = False
+        pr.close_window()
+
     def serialize_display(self):
         display_bytes = np.zeros(
             (self.DISPLAY_RESOLUTION[1], self.DISPLAY_RESOLUTION[0]), dtype=np.uint8
@@ -21,21 +70,14 @@ class CHIP8Ray(CHIP8):
 
         return display_bytes
 
-    def draw_static(self, scale: int = 16):
+    def draw(self, scale: int = 16):
         display_data = self.serialize_display()
-
         img = Image.fromarray(display_data)
         img = img.resize(
             (self.DISPLAY_RESOLUTION[0] * scale, self.DISPLAY_RESOLUTION[1] * scale),
             Image.Resampling.NEAREST,
         )
         img_data = np.array(img.convert("RGBA"))
-
-        pr.init_window(
-            self.DISPLAY_RESOLUTION[0] * scale,
-            self.DISPLAY_RESOLUTION[1] * scale,
-            "CHIP8 Emulator",
-        )
 
         r_img = pr.Image(
             img_data,
@@ -46,12 +88,9 @@ class CHIP8Ray(CHIP8):
         )
         tex = pr.load_texture_from_image(r_img)
 
-        pr.unload_image(r_img)
+        pr.begin_drawing()
+        pr.clear_background(pr.RAYWHITE)
+        pr.draw_texture(tex, 0, 0, pr.WHITE)
+        pr.end_drawing()
 
-        while not pr.window_should_close():
-            pr.begin_drawing()
-            pr.clear_background(pr.RAYWHITE)
-            pr.draw_texture(tex, 0, 0, pr.WHITE)
-            pr.end_drawing()
-
-        pr.close_window()
+        pr.unload_texture(tex)
