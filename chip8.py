@@ -168,25 +168,64 @@ class CHIP8:
         # Decode
         match (ins & 0xF000):
             case 0x0000:
-                # Clear Screen
                 if ins == 0x00E0:
+                    # 0x00E0
+                    # Clear Screen
                     for idx in range(self.DISPLAY_SIZE):
                         self.display[idx] = 0
                     # print("Screen cleared")
+                elif ins == 0x00EE:
+                    # 0x00EE
+                    # Return from subroutine: Pop value from stack and set PC to it
+                    if len(self.stack) == 0:
+                        print("Cannot return from subroutine! Stack is empty!")
+                        return
+                    
+                    self.pc = self.stack.pop()
+                    # print("Returning from subroutine!")
             case 0x1000:
+                # 0x1NNN
+                # Set PC to NNN
                 jmp_addr = ins & self.MASK_NNN
                 self.pc = jmp_addr
                 # print("Jumping to ", jmp_addr)
-                # print("Instruction at JMP: ", hex(self.memory[self.pc]), hex(self.memory[self.pc + 1]))
-                # return False
             case 0x2000:
-                pass
+                # 0x2NNN
+                # Call a subroutine: Push PC to stack, and set PC to NNN
+                self.stack.append(self.pc)
+                routine_addr = ins & self.MASK_NNN
+                self.pc = routine_addr
+                # print("Subroutine called! Jumping to addr: ", hex(routine_addr))
             case 0x3000:
-                pass
+                # 0x3XNN
+                # Skip next instruction if Reg VX == NN
+                condition_reg = (ins & self.MASK_X) >> 8
+                comp_value = ins & self.MASK_NN
+
+                # print(f"Conditional Skip Encountered! Comparing Reg: {condition_reg}[{self.registers[condition_reg]}] to val: {comp_value}")
+                if self.registers[condition_reg] == comp_value:
+                    # print("Value matches! Skipping next instruction...")
+                    self.pc += 2
             case 0x4000:
-                pass
+                # 0x4XNN
+                # Skip next instruction if Reg VX != NN
+                condition_reg = (ins & self.MASK_X) >> 8
+                comp_value = ins & self.MASK_NN
+
+                # print(f"Conditional Skip Encountered! Comparing Reg: {condition_reg}[{self.registers[condition_reg]}] to val: {comp_value}")
+                if self.registers[condition_reg] != comp_value:
+                    # print("Value does not match! Skipping next instruction...")
+                    self.pc += 2
             case 0x5000:
-                pass
+                # 0x5XY0
+                # Skip next instruction if Reg VX == Reg VY
+                reg1 = (ins & self.MASK_X) >> 8
+                reg2 = (ins & self.MASK_Y) >> 4
+
+                # print(f"Conditional Skip Encountered! Comparing Reg: {reg1}[{self.registers[reg1]}] to Reg: {reg2}[{self.registers[reg2]}]")
+                if self.registers[reg1] == self.registers[reg2]:
+                    # print("Value matches! Skipping next instruction...")
+                    self.pc += 2
             case 0x6000:
                 # 0x6XNN
                 # Set Register X to value NN
@@ -201,12 +240,22 @@ class CHIP8:
                 reg = (ins & self.MASK_X) >> 8
                 val = ins & self.MASK_NN
 
-                self.registers[reg] += val
+                new_val = (self.registers[reg] + val) % 256
+
+                self.registers[reg] = new_val
                 # print(f"Adding {val} to register {reg}: {self.registers[reg]}")
             case 0x8000:
                 pass
             case 0x9000:
-                pass
+                # 0x9XY0
+                # Skip next instruction if Reg VX != Reg VY
+                reg1 = (ins & self.MASK_X) >> 8
+                reg2 = (ins & self.MASK_Y) >> 4
+
+                # print(f"Conditional Skip Encountered! Comparing Reg: {reg1}[{self.registers[reg1]}] to Reg: {reg2}[{self.registers[reg2]}]")
+                if self.registers[reg1] != self.registers[reg2]:
+                    # print("Value does not match! Skipping next instruction...")
+                    self.pc += 2
             case 0xA000:
                 # 0xANNN
                 # Set Index Register I
