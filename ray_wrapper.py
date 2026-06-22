@@ -19,6 +19,7 @@ class CHIP8Ray(CHIP8):
     BEEP_DURATION = 0.1
     BEEP_FREQUENCY = 440
     BEEP_SOUND = None
+    TEXTURE = None
 
     INPUT_MAP = [
         pr.KEY_X,
@@ -50,6 +51,7 @@ class CHIP8Ray(CHIP8):
         )
         pr.init_audio_device()
         self._init_beep()
+        self._init_texture(self.SCALE)
 
         last_time = time.perf_counter()
 
@@ -85,6 +87,7 @@ class CHIP8Ray(CHIP8):
             last_time = time.perf_counter()
 
         self.running = False
+        pr.unload_texture(self.TEXTURE)
         pr.close_audio_device()
         pr.close_window()
 
@@ -111,22 +114,30 @@ class CHIP8Ray(CHIP8):
             Image.Resampling.NEAREST,
         )
         img_data = np.array(img.convert("RGBA"))
+        self._img_buf = img_data  # keep alive; ffi buffer below doesn't own a copy
 
-        r_img = pr.Image(
-            img_data,
-            self.DISPLAY_RESOLUTION[0] * scale,
-            self.DISPLAY_RESOLUTION[1] * scale,
-            1,
-            pr.PixelFormat.PIXELFORMAT_UNCOMPRESSED_R8G8B8A8,
+        pr.update_texture(
+            self.TEXTURE, pr.ffi.cast("void *", pr.ffi.from_buffer(img_data))
         )
-        tex = pr.load_texture_from_image(r_img)
 
         pr.begin_drawing()
         pr.clear_background(pr.RAYWHITE)
-        pr.draw_texture(tex, 0, 0, pr.WHITE)
+        pr.draw_texture(self.TEXTURE, 0, 0, pr.WHITE)
         pr.end_drawing()
 
-        pr.unload_texture(tex)
+    def _init_texture(self, scale: int):
+        width = self.DISPLAY_RESOLUTION[0] * scale
+        height = self.DISPLAY_RESOLUTION[1] * scale
+        blank = np.zeros((height, width, 4), dtype=np.uint8)
+
+        r_img = pr.Image(
+            blank,
+            width,
+            height,
+            1,
+            pr.PixelFormat.PIXELFORMAT_UNCOMPRESSED_R8G8B8A8,
+        )
+        self.TEXTURE = pr.load_texture_from_image(r_img)
 
     def _init_beep(self):
         sample_count = int(self.SAMPLE_RATE * self.BEEP_DURATION)
