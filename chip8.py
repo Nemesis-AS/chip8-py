@@ -449,7 +449,9 @@ class CHIP8:
                             self.registers[x] = self.FX0A_KEY
                             self.FX0A_KEY = None
                     case 0x29:
-                        pass
+                        # 0xFX20
+                        # Font Character: Sets the address of character X in Index Register I
+                        self.i = self.FONT_START + (self.registers[x] * 5)
                     case 0x33:
                         # 0xFX33
                         # Binary-coded decimal conversion
