@@ -1,4 +1,4 @@
-# Basic CHIP8 Emulator in Python
+# A CHIP8 Emulator Written in Python
 
 This is my first emulator I'm writing. So, or the sake of simplicity and learning I decided to write it in Python.
 
