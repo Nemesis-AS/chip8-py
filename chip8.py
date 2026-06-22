@@ -131,6 +131,7 @@ class CHIP8:
     ]
 
     KEYPRESS = [False for _ in range(16)]
+    FX0A_KEY = None
 
     def __init__(self):
         self.boot()
@@ -434,8 +435,19 @@ class CHIP8:
                         # self.registers[self.VF] = 1 if res > 255 else 0
                         self.i = res & 0xfff
                     case 0x0A:
-                        print("Getting key!")
-                        pass
+                        # 0xFX0A
+                        # Get Key: wait for a press, then block until that key is released
+                        if self.FX0A_KEY is None:
+                            for idx, key in enumerate(self.KEYPRESS):
+                                if key:
+                                    self.FX0A_KEY = idx
+                                    break
+                            self.pc -= 2
+                        elif self.KEYPRESS[self.FX0A_KEY]:
+                            self.pc -= 2
+                        else:
+                            self.registers[x] = self.FX0A_KEY
+                            self.FX0A_KEY = None
                     case 0x29:
                         pass
                     case 0x33:

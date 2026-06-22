@@ -9,14 +9,11 @@ ROMS = [
     "./roms/6-keypad.ch8",
     "./roms/7-beep.ch8",
     "./roms/8-scrolling.ch8",
-    "./roms/output.ch8",
-    "./roms/output (2).ch8",
-    "./roms/output (3).ch8"
 ]
 
 emu = CHIP8Ray()
 
-with open(ROMS[4], "rb") as file:
+with open(ROMS[5], "rb") as file:
     data = file.read()
     emu.load(data)
     emu.run()

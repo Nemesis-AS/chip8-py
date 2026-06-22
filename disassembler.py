@@ -1,7 +1,4 @@
-#!/usr/bin/env python3
-
 import argparse
-
 
 def decode_opcode(opcode):
     nnn = opcode & 0x0FFF
@@ -83,7 +80,6 @@ def decode_opcode(opcode):
 
     return "UNKNOWN"
 
-
 def disassemble(data, start_addr=0x200, mode="asm"):
     for offset in range(0, len(data) - 1, 2):
         opcode = (data[offset] << 8) | data[offset + 1]
@@ -95,7 +91,6 @@ def disassemble(data, start_addr=0x200, mode="asm"):
             print(f"{addr:03X}: {opcode:04X}")
         elif mode == "bin":
             print(f"{addr:03X}: {opcode:016b}")
-
 
 def main():
     parser = argparse.ArgumentParser(description="CHIP-8 Disassembler")
@@ -122,7 +117,6 @@ def main():
         start_addr=int(args.base, 0),
         mode=args.mode,
     )
-
 
 if __name__ == "__main__":
     main()
