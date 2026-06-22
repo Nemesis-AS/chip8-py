@@ -1,6 +1,7 @@
 import time
 import numpy as np
 import pyray as pr
+import math
 from PIL import Image
 
 from chip8 import CHIP8
@@ -13,6 +14,11 @@ class CHIP8Ray(CHIP8):
     INSTRUCTIONS_PER_FRAME = 12
     INSTRUCTIONS_PER_SECOND = FPS * INSTRUCTIONS_PER_FRAME  # For debug purposes
     SCALE = 16
+
+    SAMPLE_RATE = 44100
+    BEEP_DURATION = 0.1
+    BEEP_FREQUENCY = 440
+    BEEP_SOUND = None
 
     INPUT_MAP = [
         pr.KEY_X,
@@ -42,6 +48,8 @@ class CHIP8Ray(CHIP8):
             self.DISPLAY_RESOLUTION[1] * self.SCALE,
             "CHIP8 Emulator",
         )
+        pr.init_audio_device()
+        self._init_beep()
 
         last_time = time.perf_counter()
 
@@ -60,6 +68,8 @@ class CHIP8Ray(CHIP8):
                 self.delay -= 1
 
             if self.sound > 0:
+                if not pr.is_sound_playing(self.BEEP_SOUND):
+                    pr.play_sound(self.BEEP_SOUND)
                 self.sound -= 1
 
             # Update screen
@@ -75,6 +85,7 @@ class CHIP8Ray(CHIP8):
             last_time = time.perf_counter()
 
         self.running = False
+        pr.close_audio_device()
         pr.close_window()
 
     def serialize_display(self):
@@ -116,3 +127,17 @@ class CHIP8Ray(CHIP8):
         pr.end_drawing()
 
         pr.unload_texture(tex)
+
+    def _init_beep(self):
+        sample_count = int(self.SAMPLE_RATE * self.BEEP_DURATION)
+        samples = []
+
+        for idx in range(sample_count):
+            t = idx / self.SAMPLE_RATE
+
+            samples.append(12000 if math.sin(2 * math.pi * self.BEEP_FREQUENCY * t) > 0 else -12000)
+        
+        sample_buf = pr.ffi.new("short[]", samples)
+        wave = pr.Wave(sample_count, self.SAMPLE_RATE, 16, 1, sample_buf)
+        self.BEEP_SOUND = pr.load_sound_from_wave(wave)
+

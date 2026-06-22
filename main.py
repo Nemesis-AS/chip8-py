@@ -13,7 +13,7 @@ ROMS = [
 
 emu = CHIP8Ray()
 
-with open(ROMS[5], "rb") as file:
+with open(ROMS[6], "rb") as file:
     data = file.read()
     emu.load(data)
     emu.run()
