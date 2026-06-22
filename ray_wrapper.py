@@ -11,8 +11,27 @@ class CHIP8Ray(CHIP8):
     FPS = 60
     FRAME_TIME = 1.0 / FPS
     INSTRUCTIONS_PER_FRAME = 12
-    INSTRUCTIONS_PER_SECOND = FPS * INSTRUCTIONS_PER_FRAME # For debug purposes
+    INSTRUCTIONS_PER_SECOND = FPS * INSTRUCTIONS_PER_FRAME  # For debug purposes
     SCALE = 16
+
+    INPUT_MAP = [
+        pr.KEY_X,
+        pr.KEY_ONE,
+        pr.KEY_TWO,
+        pr.KEY_THREE,
+        pr.KEY_Q,
+        pr.KEY_W,
+        pr.KEY_E,
+        pr.KEY_A,
+        pr.KEY_S,
+        pr.KEY_D,
+        pr.KEY_Z,
+        pr.KEY_C,
+        pr.KEY_FOUR,
+        pr.KEY_R,
+        pr.KEY_F,
+        pr.KEY_V
+    ]
 
     def run(self):
         self.running = True
@@ -27,19 +46,22 @@ class CHIP8Ray(CHIP8):
         last_time = time.perf_counter()
 
         while not pr.window_should_close():
+            # Read Input
+            for idx, key in enumerate(self.INPUT_MAP):
+                self.KEYPRESS[idx] = True if pr.is_key_down(key) else False
+
+            self.draw_ready = True
+
             for _ in range(self.INSTRUCTIONS_PER_FRAME):
                 self.fdre()
-                # res = self.fdre()
-                # if not res:
-                #     return
 
             # Update Timers
             if self.delay > 0:
                 self.delay -= 1
-            
+
             if self.sound > 0:
                 self.sound -= 1
-            
+
             # Update screen
             self.draw(self.SCALE)
 

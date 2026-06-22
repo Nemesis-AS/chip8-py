@@ -17,6 +17,7 @@ class CHIP8:
     registers = bytearray(16)  # 16 single byte General Purpose Registers
 
     running = False
+    draw_ready = True  # Cleared by a draw, set again each frame by the host (display wait quirk)
 
     # General Purpose Register Indices
     V0 = 0
@@ -128,6 +129,8 @@ class CHIP8:
         0x80,
         0x80,
     ]
+
+    KEYPRESS = [False for _ in range(16)]
 
     def __init__(self):
         self.boot()
@@ -261,14 +264,17 @@ class CHIP8:
                         # 0x8XY1
                         # Binary OR: Set VX to VX OR VY
                         self.registers[x] |= self.registers[y]
+                        self.registers[self.VF] = 0
                     case 0x2:
                         # 0x8XY2
                         # Binary AND: Set VX to VX AND VY
                         self.registers[x] &= self.registers[y]
+                        self.registers[self.VF] = 0
                     case 0x3:
                         # 0x8XY3
                         # Binary XOR
                         self.registers[x] ^= self.registers[y]
+                        self.registers[self.VF] = 0
                     case 0x4:
                         # 0x8XY4
                         # Add: Set VX = VX + VY
@@ -355,38 +361,54 @@ class CHIP8:
             case 0xD000:
                 # DXYN
                 # Draw on Screen
-                # print(f"{ins:04x}", self.registers[(ins & 0x00F0) >> 4])
-                # print("Y: ", f"{((self.memory[self.pc - 2] << 2) + self.memory[self.pc - 1]):08x}")
-                x = self.registers[(ins & self.MASK_X) >> 8] % self.DISPLAY_RESOLUTION[0]
-                y = self.registers[(ins & self.MASK_Y) >> 4]
-                # print("Y:")
-                height = ins & self.MASK_N
+                if not self.draw_ready:
+                    # Display wait quirk: only one draw per frame, block until the next
+                    self.pc -= 2
+                    return True
 
-                # print(f"Setting coords ({x}, {y})")
+                self.draw_ready = False
+
+                x = self.registers[(ins & self.MASK_X) >> 8] % self.DISPLAY_RESOLUTION[0]
+                y = self.registers[(ins & self.MASK_Y) >> 4] % self.DISPLAY_RESOLUTION[1]
+                height = ins & self.MASK_N
+                row_bytes = self.DISPLAY_RESOLUTION[0] // 8
+                byte_offset = x % 8
+
+                self.registers[self.VF] = 0
 
                 for dy in range(height):
-                    offset = ((y + dy) * (self.DISPLAY_RESOLUTION[0] // 8)) + (x // 8)
+                    if y + dy >= self.DISPLAY_RESOLUTION[1]:
+                        break  # clip off bottom edge
 
-                    if x % 8 == 0:
-                        # Perfectly aligned
-                        self.display[offset] ^= self.memory[self.i + dy]
-                    else:
-                        byte_offset = x % 8
-                        # print("OFFSET: ", offset)
-                        self.display[offset] ^= self.memory[self.i + dy] >> byte_offset
+                    offset = ((y + dy) * row_bytes) + (x // 8)
+                    sprite_byte = self.memory[self.i + dy]
 
+                    before = self.display[offset]
+                    self.display[offset] ^= sprite_byte >> byte_offset
+                    if before & ~self.display[offset] & 0xFF:
+                        self.registers[self.VF] = 1
 
-                        # if (offset + 1) % 8 == 0:
-                        #     print("Overflow")
-                        self.display[offset + 1] ^= (self.memory[self.i + dy] << (8 - byte_offset)) % 256
-
-                # offset = x * self.DISPLAY_RESOLUTION[0] + y
-                # self.display[offset] = n
-                # print(f"Setting coords ({x}, {y})")
-
-                # print(self.display)
+                    if byte_offset != 0 and (x // 8) + 1 < row_bytes:
+                        before = self.display[offset + 1]
+                        self.display[offset + 1] ^= (sprite_byte << (8 - byte_offset)) % 256
+                        if before & ~self.display[offset + 1] & 0xFF:
+                            self.registers[self.VF] = 1
             case 0xE000:
-                pass
+                nn = ins & self.MASK_NN
+                x = (ins & self.MASK_X) >> 8
+                key = self.registers[x]
+
+                match nn:
+                    case 0x9E:
+                        # 0xEX9E
+                        # Skip if key corresponding to VX is pressed
+                        if self.KEYPRESS[key]:
+                            self.pc += 2
+                    case 0xA1:
+                        # 0xEXA1
+                        # Skip if key corresponding to VX is not pressed
+                        if not self.KEYPRESS[key]:
+                            self.pc += 2
             case 0xF000:
                 nn = ins & self.MASK_NN
                 x = (ins & self.MASK_X) >> 8
@@ -412,6 +434,7 @@ class CHIP8:
                         # self.registers[self.VF] = 1 if res > 255 else 0
                         self.i = res & 0xfff
                     case 0x0A:
+                        print("Getting key!")
                         pass
                     case 0x29:
                         pass
@@ -431,6 +454,7 @@ class CHIP8:
                         for offset in range(x + 1):
                             val = self.registers[offset]
                             self.memory[self.i + offset] = val
+                        self.i = (self.i + x + 1) & 0xFFF
                     case 0x65:
                         # 0xFX65
                         # Load: Loads values from memory rom I to registers V0..Vx(Inclusive)
@@ -438,6 +462,7 @@ class CHIP8:
                         for offset in range(x + 1):
                             val = self.memory[self.i + offset] % 256
                             self.registers[offset] = val
+                        self.i = (self.i + x + 1) & 0xFFF
         return True
 
     def debug_draw(self):
