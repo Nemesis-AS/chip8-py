@@ -279,34 +279,35 @@ class CHIP8:
                     case 0x5:
                         # 0x8XY5
                         # Subtract: Set VX = VX - VY
+                        vf = 1 if self.registers[x] >= self.registers[y] else 0
                         res = self.registers[x] - self.registers[y]
-                        
-                        self.registers[self.VF] = 1 if self.registers[x] >= self.registers[y] else 0
-                        
+
                         if res < 0:
                             res += 256
 
                         self.registers[x] = res
+                        self.registers[self.VF] = vf
                     case 0x6:
                         # 0x8XY6
                         # Right Shift: Set VX = VY >> 1 OR VX = VX >> 1
 
                         # @todo! Do this if the emulator is configured
-                        self.registers[self.VF] = self.registers[x] & 0x1 # Set overflow flag to the shifted bit
+                        vf = self.registers[x] & 0x1 # Capture the shifted-out bit
                         self.registers[x] = self.registers[x] >> 1
                         # self.registers[x] = self.registers[y]
                         self.registers[x] &= 0xFF
+                        self.registers[self.VF] = vf
                     case 0x7:
                         # 0x8XY7
                         # Subtract: Set VX = VY - VX
+                        vf = 1 if self.registers[y] >= self.registers[x] else 0
                         res = self.registers[y] - self.registers[x]
-                        
-                        self.registers[self.VF] = 1 if self.registers[y] >= self.registers[x] else 0
-                        
+
                         if res < 0:
                             res += 256
-                        
+
                         self.registers[x] = res
+                        self.registers[self.VF] = vf
                     case 0xE:
                         # 0x8XYE
                         # Left Shift: Set VX = VY << 1 OR VX = VX << 1
@@ -314,8 +315,9 @@ class CHIP8:
                         # @todo! Do this if the emulator is configured
                         self.registers[x] = self.registers[y]
 
-                        self.registers[self.VF] = (self.registers[x] & 0x80) >> 7 # Set overflow flag to the shifted bit
+                        vf = (self.registers[x] & 0x80) >> 7 # Capture the shifted-out bit
                         self.registers[x] = (self.registers[x] << 1) % 256
+                        self.registers[self.VF] = vf
                     case _:
                         print("Unknown Arithmetic Instruction:", hex(ins))
             case 0x9000:
