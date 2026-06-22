@@ -1,3 +1,4 @@
+import argparse
 from ray_wrapper import CHIP8Ray
 
 ROMS = [
@@ -11,9 +12,18 @@ ROMS = [
     "./roms/8-scrolling.ch8",
 ]
 
-emu = CHIP8Ray()
+def main():
+    parser = argparse.ArgumentParser(description="CHIP-8 Emulator")
+    parser.add_argument("rom", help="Path to CHIP-8 ROM", default=ROMS[0], nargs="?")
 
-with open(ROMS[6], "rb") as file:
-    data = file.read()
-    emu.load(data)
-    emu.run()
+    emu = CHIP8Ray()
+
+    args = parser.parse_args()
+
+    with open(args.rom, "rb") as file:
+        data = file.read()
+        emu.load(data)
+        emu.run()
+
+if __name__ == "__main__":
+    main()
